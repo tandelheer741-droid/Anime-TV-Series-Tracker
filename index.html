@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyWatch</title>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:'Inter',sans-serif;
+}
+
+:root{
+--bg:#f3f4f6;
+--card:#ffffff;
+--text:#111827;
+--primary:#6366f1;
+--accent:#22c55e;
+}
+
+.dark{
+--bg:#0f172a;
+--card:#1e293b;
+--text:#f8fafc;
+--primary:#818cf8;
+--accent:#34d399;
+}
+
+body{
+background:var(--bg);
+color:var(--text);
+min-height:100vh;
+display:flex;
+flex-direction:column;
+}
+
+header{
+padding:18px;
+font-size:20px;
+font-weight:700;
+text-align:center;
+position:sticky;
+top:0;
+background:var(--bg);
+z-index:10;
+}
+
+.container{
+flex:1;
+padding:15px;
+max-width:600px;
+margin:auto;
+width:100%;
+}
+
+.section{
+background:var(--card);
+padding:18px;
+border-radius:20px;
+margin-bottom:18px;
+box-shadow:0 8px 25px rgba(0,0,0,0.06);
+}
+
+input,select{
+width:100%;
+padding:14px;
+margin-top:10px;
+border-radius:16px;
+border:1px solid #e5e7eb;
+font-size:15px;
+background:transparent;
+color:var(--text);
+}
+
+button{
+margin-top:14px;
+padding:14px;
+width:100%;
+border:none;
+border-radius:18px;
+background:var(--primary);
+color:white;
+font-size:15px;
+font-weight:600;
+cursor:pointer;
+}
+
+button:active{
+transform:scale(0.97);
+}
+
+.card{
+background:var(--card);
+padding:18px;
+border-radius:22px;
+margin-bottom:15px;
+box-shadow:0 6px 18px rgba(0,0,0,0.05);
+}
+
+.title{
+font-size:17px;
+font-weight:600;
+margin-bottom:4px;
+}
+
+.meta{
+font-size:13px;
+opacity:0.7;
+margin-bottom:8px;
+}
+
+.progress{
+height:10px;
+background:#e5e7eb;
+border-radius:10px;
+overflow:hidden;
+margin-top:6px;
+}
+
+.fill{
+height:100%;
+background:var(--accent);
+}
+
+.row{
+display:flex;
+gap:8px;
+margin-top:10px;
+}
+
+.small{
+flex:1;
+padding:10px;
+border-radius:14px;
+font-size:13px;
+border:none;
+cursor:pointer;
+}
+
+.update{background:var(--accent);color:white;}
+.delete{background:#ef4444;color:white;}
+
+.bottom-nav{
+position:fixed;
+bottom:0;
+left:0;
+right:0;
+background:var(--card);
+padding:12px;
+display:flex;
+justify-content:space-around;
+box-shadow:0 -4px 15px rgba(0,0,0,0.08);
+}
+
+.nav-btn{
+background:none;
+border:none;
+font-size:14px;
+font-weight:600;
+color:var(--primary);
+cursor:pointer;
+}
+
+.toggle{
+position:absolute;
+right:15px;
+top:15px;
+font-size:13px;
+cursor:pointer;
+color:var(--primary);
+}
+</style>
+</head>
+<body>
+
+<header>
+MyWatch
+<span class="toggle" onclick="toggleTheme()">Theme</span>
+</header>
+
+<div class="container">
+
+<div class="section">
+<h3>Add Show</h3>
+<input type="text" id="title" placeholder="Show Title">
+<input type="number" id="total" placeholder="Total Episodes">
+<select id="status">
+<option>Watching</option>
+<option>Completed</option>
+<option>On Hold</option>
+<option>Dropped</option>
+<option>Plan to Watch</option>
+</select>
+<button onclick="addShow()">Add Show</button>
+</div>
+
+<div id="list"></div>
+
+</div>
+
+<div class="bottom-nav">
+<button class="nav-btn" onclick="render()">Home</button>
+<button class="nav-btn" onclick="showStats()">Stats</button>
+</div>
+
+<script>
+let shows = JSON.parse(localStorage.getItem("myWatchData")) || [];
+
+if(localStorage.getItem("theme")==="dark"){
+document.body.classList.add("dark");
+}
+
+function save(){
+localStorage.setItem("myWatchData",JSON.stringify(shows));
+}
+
+function toggleTheme(){
+document.body.classList.toggle("dark");
+localStorage.setItem("theme",
+document.body.classList.contains("dark")?"dark":"light");
+}
+
+function addShow(){
+let title=document.getElementById("title").value.trim();
+let total=parseInt(document.getElementById("total").value);
+let status=document.getElementById("status").value;
+
+if(!title||!total||total<=0){
+alert("Enter valid details");
+return;
+}
+
+let watched=status==="Completed"?total:0;
+
+shows.push({
+id:Date.now(),
+title,
+total,
+watched,
+status
+});
+
+save();
+render();
+
+document.getElementById("title").value="";
+document.getElementById("total").value="";
+}
+
+function render(){
+let list=document.getElementById("list");
+list.innerHTML="";
+
+shows.forEach(show=>{
+let percent=(show.watched/show.total)*100;
+
+list.innerHTML+=`
+<div class="card">
+<div class="title">${show.title}</div>
+<div class="meta">${show.watched}/${show.total} Episodes • ${show.status}</div>
+
+<select onchange="changeStatus(${show.id},this.value)">
+<option ${show.status==="Watching"?"selected":""}>Watching</option>
+<option ${show.status==="Completed"?"selected":""}>Completed</option>
+<option ${show.status==="On Hold"?"selected":""}>On Hold</option>
+<option ${show.status==="Dropped"?"selected":""}>Dropped</option>
+<option ${show.status==="Plan to Watch"?"selected":""}>Plan to Watch</option>
+</select>
+
+<div class="progress">
+<div class="fill" style="width:${percent}%"></div>
+</div>
+
+<div class="row">
+<button class="small update" onclick="addEpisode(${show.id})">+1</button>
+<button class="small delete" onclick="removeShow(${show.id})">Delete</button>
+</div>
+</div>
+`;
+});
+}
+
+function addEpisode(id){
+let show=shows.find(s=>s.id===id);
+if(show.watched<show.total) show.watched++;
+if(show.watched===show.total) show.status="Completed";
+save();
+render();
+}
+
+function changeStatus(id,newStatus){
+let show=shows.find(s=>s.id===id);
+show.status=newStatus;
+if(newStatus==="Completed"){
+show.watched=show.total;
+}
+save();
+render();
+}
+
+function removeShow(id){
+shows=shows.filter(s=>s.id!==id);
+save();
+render();
+}
+
+function showStats(){
+let total=shows.length;
+let completed=shows.filter(s=>s.status==="Completed").length;
+let watching=shows.filter(s=>s.status==="Watching").length;
+
+alert("Total: "+total+
+"\nWatching: "+watching+
+"\nCompleted: "+completed);
+}
+
+render();
+</script>
+
+</body>
+</html>
